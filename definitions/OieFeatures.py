@@ -1,9 +1,10 @@
 __author__ = 'diego'
 
-
 import nltk
 import re, string
 import settings
+import pickle
+
 parsing = 0
 entities = 1
 trig = 2
@@ -181,54 +182,8 @@ def posPatternPath(info, arg1, arg2):
         return ''
 
 
-import pickle
-docLDADic = pickle.load(open(settings.lda_pairs_path + "doc-topicPairs.p", "rb"))
-sentLDADic = pickle.load(open(settings.lda_pairs_path + "sent-topicPairs.p", "rb"))
-
-def sentence_theme(info, arg1, arg2):
-    return str(sentLDADic[info[sentence]])
-
-def doc_theme(info, arg1, arg2):
-    return str(docLDADic[info[docPath]])
-
 def getBasicCleanFeatures():
     features = [trigger, entityTypes, arg1_lower, arg2_lower, bow_clean, entity1Type, entity2Type, lexicalPattern,
                 posPatternPath]
     return features
 
-
-
-
-if __name__ == '__main__':
-    pass
-    # examples = loadExamples('/Users/admin/isti/amsterdam/data/candidate-100.txt')
-    #
-    # ex = examples[0]
-    #
-    # print ex
-
-    #pathUp, pathDown =  utils.getPathBetween(sent.tokens[3], sent.tokens[11])
-    #print pathUp
-    #print pathDown
-    # pred = sent.tokens[41]
-    # arg = sent.tokens[42]
-    #
-    # print  pred.wordForm + ":" + stringPathBetween(pred, arg, includeLemmas = False, includePos = False) + ":" + arg.wordForm
-    # print  pred.wordForm + ":" + stringPathToRoot(pred, includeLemmas = True, maxLen=1) + ":" + sent.tokens[0].wordForm
-    # print  pred.wordForm + ":" + stringPosTagsBetween(sent, pred, arg, maxLen = 2, includeEnds = True) + ":" + arg.wordForm
-    #
-    # processing.Sentences.saveSentences(sents, "/Users/titovian/SRL-Parsing/data/conll08st/train/t", saveOnlyRoles=True)
-    #
-    # #features = getJohanssonPredDisFeatures()
-    # #features = getJohanssonArgLabFeatures()
-    # features = getBasicFeatures()
-    #
-    # print "pred = " + pred.wordForm + ", arg = " + arg.wordForm
-    #
-    # s = []
-    # for f in features:
-    #     res = f(sent, pred, arg)
-    #     if res is not None:
-    #         s.append(f.__name__ + "#" + res)
-    #
-    # print s

@@ -10,7 +10,7 @@ import cPickle as pickle
 
 class Bilinear(object):
 
-    def __init__(self, rng, embedSize, relationNum, argVocSize, data, ex_emb, parint=''):
+    def __init__(self, rng, embedSize, relationNum, argVocSize, data, ex_emb):
 
         self.k = embedSize
         self.r = relationNum
@@ -26,13 +26,6 @@ class Bilinear(object):
         CNP = np.asarray(rng.normal(0, math.sqrt(0.1), size=(k, k, r)), dtype=theano.config.floatX)
 
 
-        # CNP = np.asarray(rng.normal(0, math.sqrt(0.1), size=(r, k, k)), dtype=theano.config.floatX)
-        #
-        # for i in xrange(len(CNP)):
-        #     CNP[i] = np.identity(k)
-        # CNP = CNP.reshape(k, k, r)
-
-
         self.C = theano.shared(value=CNP, name='C')
         # self.C = theano.printing.Print("C = ")(self.C)
                 # argument embeddings
@@ -41,10 +34,6 @@ class Bilinear(object):
         if ex_emb:
             import gensim
             external_embeddings = gensim.models.Word2Vec.load(settings.external_embeddings_path)
-            # for idArg in xrange(self.a):
-            #     arg = data.id2Arg[idArg].lower().replace(' ', '_')
-            #     if arg in external_embeddings:
-            #         ANP[idArg] = external_embeddings[arg]
             for idArg in xrange(self.a):
                 arg = data.id2Arg[idArg].lower().split(' ')
                 new = np.zeros(k, dtype=theano.config.floatX)
@@ -67,23 +56,6 @@ class Bilinear(object):
         # self.params = [self.C, self.A]
         self.params = [self.C, self.A, self.Ab]
 
-
-
-
-
-
-
-    # def factorization(self, batchSize, argsA, argsB, relationProbs):
-    #     l = batchSize
-    #     k = self.k  # embed size
-    #     r = self.r  # relation number
-    #     argEmbedsA = self.A[argsA.flatten()]  # [l,k]
-    #     argEmbedsB = self.A[argsB.flatten()]  # [l,k]
-    #
-    #     first = T.tensordot(relationProbs, self.C, axes=[[1], [2]])  # [l,r] * [k,k,r] = [l, k, k]
-    #     Afirst = T.batched_tensordot(first, argEmbedsA, axes=[[1], [1]])  # + self.Cb  # [l, k, k] * [l, k] = [l, k]
-    #     Asecond = T.batched_dot(Afirst, argEmbedsB)  # [l, k] * [l, k] = [l]
-    #     return Asecond
 
 
     def factorization(self, batchSize, argsEmbA, argsEmbB, wC):

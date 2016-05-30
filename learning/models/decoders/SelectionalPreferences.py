@@ -9,7 +9,7 @@ import cPickle as pickle
 
 class SelectionalPreferences(object):
 
-    def __init__(self, rng, embedSize, relationNum, argVocSize, data, ex_emb, parint=''):
+    def __init__(self, rng, embedSize, relationNum, argVocSize, data, ex_emb):
 
         self.k = embedSize
         self.r = relationNum
@@ -18,8 +18,6 @@ class SelectionalPreferences(object):
         a = self.a
         k = self.k
         r = self.r
-
-
 
 
         # Selectional Preferences
@@ -34,10 +32,7 @@ class SelectionalPreferences(object):
         if ex_emb:
             import gensim
             external_embeddings = gensim.models.Word2Vec.load(settings.external_embeddings_path)
-            # for idArg in xrange(self.a):
-            #     arg = data.id2Arg[idArg].lower().replace(' ', '_')
-            #     if arg in external_embeddings:
-            #         ANP[idArg] = external_embeddings[arg]
+
             for idArg in xrange(self.a):
                 arg = data.id2Arg[idArg].lower().split(' ')
                 new = np.zeros(k, dtype=theano.config.floatX)
@@ -50,13 +45,7 @@ class SelectionalPreferences(object):
                     ANP[idArg] = new/size
 
         self.A = theano.shared(value=ANP, name='A')  # (a1, k)
-        #self.A = theano.printing.Print("A=")(self.A)
-        # selectional preference bias, do we need it?
-        # self.Cb = theano.shared(value=np.zeros(k,  dtype=theano.config.floatX),  # @UndefinedVariable
-        #                         name='Cb', borrow=True)
 
-        # self.C2 = theano.printing.Print("C2=")(self.C2)
-        # argument bias(as arguments are 'predicted' by the model)
         self.Ab = theano.shared(value=np.zeros(a,  dtype=theano.config.floatX),  # @UndefinedVariable
                                 name='Ab', borrow=True)
 
@@ -71,7 +60,6 @@ class SelectionalPreferences(object):
         k = self.k  # embed size
         r = self.r  # relation number
         argEmbeds = self.A[args.flatten()]
-        # first = T.dot(relationProbs, self.C1.dimshuffle(1, 0)) #+ self.Cb  # [l,r] * [r,k] = [l, k]
         Afirst = T.batched_dot(wC1, argEmbeds)
         return Afirst
 
@@ -80,7 +68,6 @@ class SelectionalPreferences(object):
         k = self.k  # embed size
         r = self.r  # relation number
         argEmbeds2 = self.A[args.flatten()]
-        # second = T.dot(relationProbs, self.C2.dimshuffle(1, 0))  # [l,r] * [r,k] = [l, k]
         Asecond = T.batched_dot(wC2, argEmbeds2)
         return Asecond
 
@@ -90,7 +77,6 @@ class SelectionalPreferences(object):
         # l = batchSize
         # k = self.k  # embed size
         # r = self.r  # relation number
-        # first = T.dot(relationProbs, self.C1.dimshuffle(1, 0))  # [l,r] * [r,k] = [l, k]
         Afirst = T.batched_tensordot(wC1, negEmbed.dimshuffle(1, 2, 0), axes=[[1], [1]])  # [l,k] [l,k,n] = [l,n]
         return Afirst
 
@@ -98,7 +84,6 @@ class SelectionalPreferences(object):
         # l = batchSize
         # k = self.k  # embed size
         # r = self.r  # relation number
-        # second = T.dot(relationProbs, self.C2.dimshuffle(1, 0))  # [l,r] * [r,k] = [l, k]
         Asecond = T.batched_tensordot(wC2, negEmbed.dimshuffle(1, 2, 0), axes=[[1], [1]])  # [l,k] [l,k,n] = [l,n]
         return Asecond
 

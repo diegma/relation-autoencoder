@@ -10,22 +10,19 @@ import cPickle as pickle
 
 class MatrixDataSet:
     # matrix formatted dataset
-    def __init__(self, arguments1, arguments2, triggers, argFeatures, negArgs1, negArgs2, negTrigs):
+    def __init__(self, arguments1, arguments2, argFeatures, negArgs1, negArgs2):
         self.args1 = arguments1  # (l)
         self.args2 = arguments2  # (l)
-        self.trigs = triggers    # (l)
         self.xFeats = argFeatures  # (l, h)
         self.neg1 = negArgs1  # (n, l)
         self.neg2 = negArgs2  # (n, l)
-        self.negTrigs = negTrigs
 
 
 class MatrixDataSetNoEncoding:
     # matrix formatted dataset
-    def __init__(self, arguments1, arguments2, triggers, realProbs):
+    def __init__(self, arguments1, arguments2, realProbs):
         self.args1 = arguments1  # (l)
         self.args2 = arguments2  # (l)
-        self.trigs = triggers    # (l)
         self.realProbs = realProbs  # (l, r)
 
 
@@ -33,14 +30,13 @@ class MatrixDataSetNoEncoding:
 
 
 class DataSetManager:
-    def __init__(self, oieDataset, featureLex, rng, negSamplesNum, relationNum, trigs, negSamplingDistrPower=0.75):
+    def __init__(self, oieDataset, featureLex, rng, negSamplesNum, relationNum, negSamplingDistrPower=0.75):
 
         self.negSamplesNum = negSamplesNum  # the number of negative samples considered
 
         self.negSamplingDistrPower = negSamplingDistrPower  # the sampling distribution for negative sampling
 
         self.rng = rng
-        self.trigs = trigs
 
         self.relationNum = relationNum
 
@@ -91,12 +87,10 @@ class DataSetManager:
         args1 = np.zeros(l, dtype=np.int32)  #
         args2 = np.zeros(l, dtype=np.int32)  #
 
-        trigs = np.zeros(l, dtype=np.int32)  #
 
         neg1 = np.zeros((n, l), dtype=np.int32)  #
         neg2 = np.zeros((n, l), dtype=np.int32)  #
 
-        negTrigs = np.zeros((n, l), dtype=np.int32)
 
         # print self.featureLex.getDimensionality()
         xFeatsDok = sp.dok_matrix((l, self.featureLex.getDimensionality()), dtype=theano.config.floatX)
@@ -105,8 +99,6 @@ class DataSetManager:
         for i, oieEx in enumerate(oieExamples):
             args1[i] = self.arg2Id[oieEx.arg1]
             args2[i] = self.arg2Id[oieEx.arg2]
-            if self.trigs:
-                trigs[i] = self.arg2Id[oieEx.trigger]
 
             for feat in oieEx.features:
                 xFeatsDok[i, feat] = 1
@@ -118,15 +110,12 @@ class DataSetManager:
 
             for k in xrange(n):
                 neg2[k, i] = self._sample(self.negSamplingCum)
-            if self.trigs:
-                for k in xrange(n):
-                    negTrigs[k, i] = self._sample(self.negSamplingCum)
-
+            
 
 
         xFeats = sp.csr_matrix(xFeatsDok, dtype="float32")
 
-        return MatrixDataSet(args1, args2, trigs, xFeats, neg1, neg2, negTrigs)
+        return MatrixDataSet(args1, args2, xFeats, neg1, neg2)
 
     def _indexElements(self, elements):
 
@@ -154,11 +143,8 @@ class DataSetManager:
                     argFreqs[oieEx.arg2] = 1
                 else:
                     argFreqs[oieEx.arg2] += 1
-                if self.trigs:
-                    if oieEx.trigger not in argFreqs:
-                        argFreqs[oieEx.trigger] = 1
-                    else:
-                        argFreqs[oieEx.trigger] += 1
+
+
 
         self.id2Arg, self.arg2Id = self._indexElements(argFreqs)
 

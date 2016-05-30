@@ -8,19 +8,18 @@ from models.encoders.RelationClassifier import IndependentRelationClassifiers
 class OieModelFunctions(object):
 
     def __init__(self, rng, featureDim, embedSize, relationNum, argVocSize, model,
-                 rank, data, extEmb, extendedReg, alpha, parint):
+                  data, extEmb, extendedReg, alpha):
         self.rng = rng
 
         self.h = featureDim
         self.k = embedSize
         self.r = relationNum
-        self.n = rank
+        
         self.a = argVocSize
         self.model = model
         self.relationClassifiers = IndependentRelationClassifiers(rng, featureDim, relationNum)
         self.params = self.relationClassifiers.params
         self.alpha = alpha
-        self.parint = parint
         print 'Feature space size =', self.h
         print 'Argument vocabulary size =', argVocSize
 
@@ -32,7 +31,7 @@ class OieModelFunctions(object):
             print 'Bilinear Model'
             from models.decoders.Bilinear import Bilinear
 
-            self.argProjector = Bilinear(rng, embedSize, relationNum, self.a, data, extEmb, parint)
+            self.argProjector = Bilinear(rng, embedSize, relationNum, self.a, data, extEmb)
             self.params += self.argProjector.params
             if extendedReg:
                 self.L1 += T.sum(abs(self.argProjector.C))
@@ -42,7 +41,7 @@ class OieModelFunctions(object):
             print 'Bilinear + Selectional Preferences Model'
             from models.decoders.BilinearPlusSP import BilinearPlusSP
 
-            self.argProjector = BilinearPlusSP(rng, embedSize, relationNum, self.a, data, extEmb, parint)
+            self.argProjector = BilinearPlusSP(rng, embedSize, relationNum, self.a, data, extEmb)
             self.params += self.argProjector.params
             if extendedReg:
                 self.L1 += T.sum(abs(self.argProjector.C1)) + T.sum(abs(self.argProjector.C2)) + T.sum(abs(self.argProjector.C))
@@ -53,7 +52,7 @@ class OieModelFunctions(object):
             print 'Selectional Preferences'
             from models.decoders.SelectionalPreferences import SelectionalPreferences
 
-            self.argProjector = SelectionalPreferences(rng, embedSize, relationNum, self.a, data, extEmb, parint)
+            self.argProjector = SelectionalPreferences(rng, embedSize, relationNum, self.a, data, extEmb)
             self.params += self.argProjector.params
             if extendedReg:
                 self.L1 += T.sum(abs(self.argProjector.C1)) + T.sum(abs(self.argProjector.C2))
@@ -61,7 +60,7 @@ class OieModelFunctions(object):
 
 
 
-    def buildTrainErrComputation(self, batchSize, negNum, xFeats, args1, args2, trigs, neg1, neg2, negTrig):
+    def buildTrainErrComputation(self, batchSize, negNum, xFeats, args1, args2, neg1, neg2):
         l = batchSize
         n = negNum
 

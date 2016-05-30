@@ -9,7 +9,7 @@ import cPickle as pickle
 
 class BilinearPlusSP(object):
 
-    def __init__(self, rng, embedSize, relationNum, argVocSize, data, ex_emb, parint=''):
+    def __init__(self, rng, embedSize, relationNum, argVocSize, data, ex_emb, ):
 
         self.k = embedSize
         self.r = relationNum
@@ -37,10 +37,7 @@ class BilinearPlusSP(object):
         if ex_emb:
             import gensim
             external_embeddings = gensim.models.Word2Vec.load(settings.external_embeddings_path)
-            # for idArg in xrange(self.a):
-            #     arg = data.id2Arg[idArg].lower().replace(' ', '_')
-            #     if arg in external_embeddings:
-            #         ANP[idArg] = external_embeddings[arg]
+
             for idArg in xrange(self.a):
                 arg = data.id2Arg[idArg].lower().split(' ')
                 new = np.zeros(k, dtype=theano.config.floatX)
@@ -53,8 +50,7 @@ class BilinearPlusSP(object):
                     ANP[idArg] = new/size
 
         self.A = theano.shared(value=ANP, name='A')  # (a1, k)
-        #self.A = theano.printing.Print("A=")(self.A)
-        # argument biases (as arguments are 'predicted' by the model)
+
         self.Ab = theano.shared(value=np.zeros(a,  dtype=theano.config.floatX),  # @UndefinedVariable
                                  name='Ab', borrow=True)
 
@@ -67,13 +63,9 @@ class BilinearPlusSP(object):
         # l = batchSize
         # k = self.k  # embed size
         # r = self.r  # relation number
-        # argEmbedsA = self.A[argsA.flatten()]  # [l,k]
-        # argEmbedsB = self.A[argsB.flatten()]  # [l,k]
 
-        # first = T.tensordot(relationProbs, self.C, axes=[[1], [2]])  # [l,r] * [k,k,r] = [l, k, k]
         Afirst = T.batched_tensordot(wC, argsEmbA, axes=[[1], [1]])  # + self.Cb  # [l, k, k] * [l, k] = [l, k]
         Asecond = T.batched_dot(Afirst, argsEmbB)  # [l, k] * [l, k] = [l]
-        # entropy = T.sum(T.log(relationProbs) * relationProbs, axis=1)  # [l,r] * [l,r] = [l]
         spFirst = T.batched_dot(wC1, argsEmbA)
         spSecond = T.batched_dot(wC2, argsEmbB)
         return Asecond + spFirst + spSecond
@@ -84,13 +76,10 @@ class BilinearPlusSP(object):
         # l = batchSize
         # k = self.k  # embed size
         # r = self.r  # relation number
-        # argEmbedsA = self.A[argsA.flatten()]  # [l,k]
-        # argEmbedsB = self.A[argsB.flatten()]  # [l,k]
-        # first = T.tensordot(relationProbs, self.C, axes=[[1], [2]])  # [l,r] * [k,k,r] = [l, k, k]
+
         Afirst = T.batched_tensordot(wC, negEmbA.dimshuffle(1, 2, 0), axes=[[1], [1]])  # [l, k, k] * [n, l, k] = [l, k, n]
         Asecond = T.batched_tensordot(Afirst, argsEmbB, axes=[[1], [1]])  # [l, k, n] * [l, k] = [l, n]
 
-        # spFirst = T.dot(relationProbs, self.C1.dimshuffle(1, 0))  # [l,r] * [r,k] = [l, k]
         spAfirst = T.batched_tensordot(wC1, negEmbA.dimshuffle(1, 2, 0), axes=[[1], [1]])  # [l,k] [l,k,n] = [l,n]
 
         spSecond = T.batched_dot(wC2, argsEmbB)
@@ -123,7 +112,6 @@ class BilinearPlusSP(object):
                                  wC2=weightedC2)
 
         u = T.concatenate([one + self.Ab[args1], one + self.Ab[args2]])
-        # u = theano.printing.Print("u=")(u)
         logScoresP = T.log(T.nnet.sigmoid(u))
 
         allScores = logScoresP

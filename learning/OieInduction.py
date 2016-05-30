@@ -13,12 +13,10 @@ from theano import sparse
 import theano
 import theano.tensor as T
 from learning.OieModel import OieModelFunctions
-# from learning.OieModel import OieModelFunctionsEmbeddingFeats
 
 from learning.OieData import DataSetManager
 from learning.OieData import MatrixDataSet
 from processing.OiePreprocessor import FeatureLexicon
-from evaluation.OieEvaluation import multiLabelClusterEvaluation
 from evaluation.OieEvaluation import singleLabelClusterEvaluation
 import definitions.settings as settings
 from learning.NegativeExampleGenerator import NegativeExampleGenerator
@@ -27,9 +25,8 @@ from collections import OrderedDict
 class ReconstructInducer(object):
 
     def __init__(self, data, goldStandard, rand, epochNum, learningRate, batchSize, embedSize, lambdaL1, lambdaL2,
-                 optimization, modelName, rank, model, fixedSampling, singleReconstruction, extEmb, extendedReg,
-                 embeddingFeats, frequentEval, alpha, parint):
-        self.singleReconstruction = singleReconstruction
+                 optimization, modelName, model, fixedSampling, extEmb, extendedReg,
+                 frequentEval, alpha):
         self.rand = rand
         self.data = data
         self.goldStandard = goldStandard
@@ -39,18 +36,17 @@ class ReconstructInducer(object):
         self.relationNum = data.getRelationNum()
         self.extEmb = extEmb
         self.extendedReg = extendedReg
-        self.embeddingFeats = embeddingFeats
         self.frequentEval = frequentEval
         self.alpha = alpha
 
         self.modelID = model + '_' + modelName+'_maxepoch'+str(epochNum)+'_lr'+str(learningRate)\
                         + '_embedsize' + str(embedSize) + '_l1' + str(lambdaL1) + '_l2' + str(lambdaL2) \
-                        + '_opt' + str(optimization) + '_rank' + str(rank) + '_rel_num' + str(self.relationNum)+ \
+                        + '_opt' + str(optimization) + '_rel_num' + str(self.relationNum)+ \
                        '_batch' + str(batchSize) + '_negs' + str(data.negSamplesNum)
 
         self.modelFunc = OieModelFunctions(rand, data.getDimensionality(), embedSize,  self.relationNum,
-                                           data.getArgVocSize(), model, rank, self.data, self.extEmb, self.extendedReg,
-                                           self.alpha, parint)
+                                           data.getArgVocSize(), model, self.data, self.extEmb, self.extendedReg,
+                                           self.alpha)
 
         self.embedSize = embedSize
         self.epochNum = epochNum
@@ -69,11 +65,9 @@ class ReconstructInducer(object):
         sharedMatrix = MatrixDataSet(
                 arguments1=theano.shared(matrixDataset.args1, borrow=borrow),
                 arguments2=theano.shared(matrixDataset.args2, borrow=borrow),
-                triggers=theano.shared(matrixDataset.trigs, borrow=borrow),
                 argFeatures=theano.shared(matrixDataset.xFeats, borrow=borrow),
                 negArgs1=theano.shared(matrixDataset.neg1, borrow=borrow),
-                negArgs2=theano.shared(matrixDataset.neg2, borrow=borrow),
-                negTrigs=theano.shared(matrixDataset.negTrigs, borrow=borrow)
+                negArgs2=theano.shared(matrixDataset.neg2, borrow=borrow)
         )
         return sharedMatrix
 
@@ -100,16 +94,14 @@ class ReconstructInducer(object):
 
         args1 = T.ivector()  # l
         args2 = T.ivector()  # l
-        trigs = T.ivector()  # l
         neg1 = T.imatrix()  # n, l
         neg2 = T.imatrix()  # n, l
-        negTrig = T.imatrix()  # n, l
 
         print "Starting to build train err computation (not compiling it yet)"
         adjust = float(batchSize) / float(trainDataNP.args1.shape[0])
 
         cost = self.modelFunc.buildTrainErrComputation(batchSize, self.data.getNegNum(),
-                                                           xFeats, args1, args2, trigs, neg1, neg2, negTrig) + \
+                                                           xFeats, args1, args2, neg1, neg2) + \
                        (lambda1 * self.modelFunc.L1 * adjust) + \
                        (lambda2 * self.modelFunc.L2 * adjust)
 
@@ -135,35 +127,32 @@ class ReconstructInducer(object):
 
 
 
-        trainModel = theano.function(inputs=[batchIdx, neg1, neg2, negTrig],
+        trainModel = theano.function(inputs=[batchIdx, neg1, neg2],
                                      outputs=cost,
                                      updates=updates,
                                      givens={
                 xFeats: trainData.xFeats[batchIdx * batchSize: (batchIdx + 1) * batchSize],
                 args1: trainData.args1[batchIdx * batchSize: (batchIdx + 1) * batchSize],
-                args2: trainData.args2[batchIdx * batchSize: (batchIdx + 1) * batchSize],
-                trigs: trainData.trigs[batchIdx * batchSize: (batchIdx + 1) * batchSize]
+                args2: trainData.args2[batchIdx * batchSize: (batchIdx + 1) * batchSize]
                                      }
             )
         if False:
-            trainEncoder = theano.function(inputs=[batchIdx, neg1, neg2, negTrig],
+            trainEncoder = theano.function(inputs=[batchIdx, neg1, neg2],
                                      outputs=cost,
                                      updates=updatesEncoder,
                                      givens={
                 xFeats: trainData.xFeats[batchIdx * batchSize: (batchIdx + 1) * batchSize],
                 args1: trainData.args1[batchIdx * batchSize: (batchIdx + 1) * batchSize],
-                args2: trainData.args2[batchIdx * batchSize: (batchIdx + 1) * batchSize],
-                trigs: trainData.trigs[batchIdx * batchSize: (batchIdx + 1) * batchSize]
+                args2: trainData.args2[batchIdx * batchSize: (batchIdx + 1) * batchSize]
                                      }
             )
-            trainDecoder = theano.function(inputs=[batchIdx, neg1, neg2, negTrig],
+            trainDecoder = theano.function(inputs=[batchIdx, neg1, neg2],
                                      outputs=cost,
                                      updates=updatesDecoder,
                                      givens={
                 xFeats: trainData.xFeats[batchIdx * batchSize: (batchIdx + 1) * batchSize],
                 args1: trainData.args1[batchIdx * batchSize: (batchIdx + 1) * batchSize],
-                args2: trainData.args2[batchIdx * batchSize: (batchIdx + 1) * batchSize],
-                trigs: trainData.trigs[batchIdx * batchSize: (batchIdx + 1) * batchSize]
+                args2: trainData.args2[batchIdx * batchSize: (batchIdx + 1) * batchSize]
                                      }
             )
 
@@ -252,11 +241,8 @@ class ReconstructInducer(object):
                                                                                      self.data.getNegNum())
             negativeSamples2 = self.negativeSampler.generate_random_negative_example(trainDataNP.args2,
                                                                                      self.data.getNegNum())
-            negativeSamplesTrigs = self.negativeSampler.generate_random_negative_example(trainDataNP.trigs,
-                                                                                        self.data.getNegNum())
+
             err = 0
-            decoderErr = 0
-            encoderErr = 0
             epochStartTime = time.clock()
 
             epoch += 1
@@ -265,23 +251,13 @@ class ReconstructInducer(object):
                 if not self.fixedSampling:
                     neg1 = negativeSamples1[:, idx * self.batchSize: (idx + 1) * self.batchSize]
                     neg2 = negativeSamples2[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-                    negTrig = negativeSamplesTrigs[:, idx * self.batchSize: (idx + 1) * self.batchSize]
                 else:
                     neg1 = trainDataNP.neg1[:, idx * self.batchSize: (idx + 1) * self.batchSize]
                     neg2 = trainDataNP.neg2[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-                    negTrig = trainDataNP.negTrigs[:, idx * self.batchSize: (idx + 1) * self.batchSize]
 
-                if False:
-                    ls = trainDecoder(idx, neg1, neg2, negTrig)
-                    err += ls
-                    decoderErr += ls
-                    if epoch>50:
-                        ls = trainEncoder(idx, neg1, neg2, negTrig)
-                        encoderErr += ls
-                        err += ls
-                else:
-                    ls = trainModel(idx, neg1, neg2, negTrig)
-                    err += ls
+
+                ls = trainModel(idx, neg1, neg2)
+                err += ls
 
                 # self.modelFunc.argProjector.normalize()
                 # print('.'),
@@ -308,8 +284,6 @@ class ReconstructInducer(object):
             epochEndTime = time.clock()
 
             print 'Training error ', str(err)
-            print 'Encoder error', str(encoderErr)
-            print 'Decoder error', str(decoderErr)
             print "Epoch time = " + str(epochEndTime - epochStartTime)
 
             if validDataNP is None or testDataNP is None:
@@ -364,132 +338,6 @@ class ReconstructInducer(object):
         print >> sys.stderr, ('The code for file ' + os.path.split(__file__)[1] +
                               ' ran for %.1fs' % ((endTime - startTime)))
 
-
-    def learn_early_stopping(self):
-        trainDataNP = self.data.getTrainSet()
-        validDataNP = self.data.getValidSet()
-        testDataNP = self.data.getTestSet()
-
-        print "Starting to compile functions"
-        if validDataNP is not None and testDataNP is not None:
-            trainModel, labelTest, labelValid = self.compileFunction(self.learningRate, self.epochNum,
-                                                                     self.batchSize, self.lambdaL1, self.lambdaL2)
-        else:
-            trainModel, labelTrain = self.compileFunction(self.learningRate, self.epochNum,
-                                                          self.batchSize, self.lambdaL1, self.lambdaL2)
-        ###############
-        # TRAIN MODEL #
-        ###############
-
-        # compute number of minibatches for training, validation and testing
-        trainBatchNum = trainDataNP.args1.shape[0] / self.batchSize
-
-        if validDataNP is not None and testDataNP is not None:
-            validBatchNum = validDataNP.args1.shape[0] / self.batchSize
-            validEval = singleLabelClusterEvaluation(self.goldStandard['dev'], False)
-
-            testBatchNum = testDataNP.args1.shape[0] / self.batchSize
-            testEval = singleLabelClusterEvaluation(self.goldStandard['test'], False)
-        else:
-            trainEval = singleLabelClusterEvaluation(self.goldStandard['train'], False)
-
-
-        print str(trainBatchNum * self.batchSize) + " training examples, "
-        # print trainDataNP.args1.shape[0], self.batchSize, trainBatchNum
-        print '... training the model'
-        startTime = time.clock()
-
-
-        # early-stopping parameters
-        patience = 5000  # look as this many examples regardless
-        patienceIncrease = 2  # wait this much longer when a new best is
-                                      # found
-        improvementThreshold = 0.995  # a relative improvement of this much is
-                                      # considered significant
-        validationFrequency = min(trainBatchNum, patience / 2)
-                                      # go through this many
-                                      # minibatches before checking the network
-                                      # on the validation set; in this case we
-                                      # check every epoch
-
-        bestValidationLoss = np.inf
-
-        startTime = time.clock()
-
-        doneLooping = False
-        epoch = 0
-
-        # trainClusters = self.getClustersSets(labelTrain, trainBatchNum)
-        # getClustersWithFrequencies(trainClusters, self.data, settings.elems_to_visualize)
-        # self.modelFunc.argProjector.normalize()
-        while (epoch < self.epochNum) and (not doneLooping):
-
-            grads = []
-            negativeSamples1 = self.negativeSampler.generate_random_negative_example(trainDataNP.args1,
-                                                                                     self.data.getNegNum())
-            negativeSamples2 = self.negativeSampler.generate_random_negative_example(trainDataNP.args2,
-                                                                                     self.data.getNegNum())
-            negativeSamplesTrigs = self.negativeSampler.generate_random_negative_example(trainDataNP.trigs,
-                                                                                     self.data.getNegNum())
-            err = 0
-            epochStartTime = time.clock()
-            # print str(self.modelFunc.relationClassifiers.W.get_value())
-            # print str(self.modelFunc.argProjector.C.get_value())
-            epoch += 1
-            print '\nEPOCH ' + str(epoch)
-            for idx in xrange(trainBatchNum):
-
-                if not self.fixedSampling:
-                    neg1 = negativeSamples1[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-                    neg2 = negativeSamples2[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-                    negTrig = negativeSamplesTrigs[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-                else:
-                    neg1 = trainDataNP.neg1[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-                    neg2 = trainDataNP.neg2[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-                    negTrig = trainDataNP.negTrigs[:, idx * self.batchSize: (idx + 1) * self.batchSize]
-
-                if self.model == 'Bsoftmax':
-                    ls = trainModel(idx)
-                else:
-                    ls = trainModel(idx, neg1, neg2, negTrig)
-                err += ls
-
-                iteration = (epoch - 1) * trainBatchNum + idx
-
-                if (iteration + 1) % validationFrequency == 0:
-                    print 'Iteration', iteration
-                    validClusters = self.getClustersSets(labelValid, validBatchNum)
-                    validEval.createResponse(validClusters)
-                    validLoss = 1 - validEval.getF1()
-
-
-                    if validLoss < bestValidationLoss:
-                        validEval.printEvaluation('Validation')
-                        getClustersWithFrequencies(validClusters, self.data, settings.elems_to_visualize)
-                        if not settings.debug:
-                            testClusters = self.getClustersSets(labelTest, testBatchNum)
-                            testEval.createResponse(testClusters)
-                            testEval.printEvaluation('Test')
-                            pickleClustering(testClusters, self.modelID+'_iteration'+str(iteration))
-
-                        #improve patience if loss improvement is good enough
-                        if validLoss < bestValidationLoss * improvementThreshold:
-                            patience = max(patience, iteration * patienceIncrease)
-
-                        bestValidationLoss = validLoss
-
-                if patience <= iteration:
-                    doneLooping = True
-                    break
-
-
-
-
-        endTime = time.clock()
-        print 'Optimization complete'
-        print 'The code run for %d epochs, with %f epochs/sec' % (epoch, 1. * epoch / (endTime - startTime))
-        print >> sys.stderr, ('The code for file ' + os.path.split(__file__)[1] +
-                              ' ran for %.1fs' % ((endTime - startTime)))
 
 
 
@@ -774,31 +622,16 @@ def getCommandArgs():
                         help='Name or ID of the model')
 
     parser.add_argument('--model', metavar='model', nargs='?', type=str, required=True,
-                        help='Model Type choose among A () and B (low rank).')
-
-    parser.add_argument('--rank', metavar='rank', nargs='?', type=int, default=20,
-                        help='rank value')
-
-    parser.add_argument('--trig_embed_size', metavar='trig_embed_size', nargs='?', type=int, default=31,
-                        help='size of the trigger embeddings')
+                        help='Model Type choose among A, C, AC.')
 
     parser.add_argument('--fixed_sampling', metavar='fixed_sampling', nargs='?', default='False',
                         help='fixed/dynamic sampling switch, default fixed sampling')
-
-    parser.add_argument('--early_stopping', metavar='early_stopping', nargs='?', default='False',
-                        help='early stopping switch, default False')
-
-    parser.add_argument('--single_reconstruction', metavar='single_reconstruction', nargs='?', default='False',
-                        help='single argument reconstruction switch, default False')
 
     parser.add_argument('--ext_emb', metavar='ext_emb', nargs='?', default='False',
                         help='external embeddings, default False')
 
     parser.add_argument('--extended_reg', metavar='extended_reg', nargs='?', default='False',
                         help='extended regularization on reconstruction parameters, default False')
-
-    parser.add_argument('--embedding_feats', metavar='embedding_feats', nargs='?', default='False',
-                        help='using embedding features in the encoding part, default False')
 
     parser.add_argument('--frequent_eval', metavar='frequent_eval', nargs='?', default='False',
                         help='using frequent evaluation, default False')
@@ -809,8 +642,6 @@ def getCommandArgs():
     parser.add_argument('--alpha', metavar='alpha', nargs='?', type=float, default=1.0,
                         help='alpha coefficient for scaling the entropy term')
 
-    parser.add_argument('--parinit', metavar='parinit', nargs='?', type=str, default='',
-                        help='path of the pickled file of the parameters')
 
     return parser.parse_args()
 
@@ -829,7 +660,6 @@ if __name__ == '__main__':
 
     negativeSamples = args.negative_samples_number
     numberRelations = args.relations_number
-    print args.early_stopping
     indexedData, goldStandard = loadData(args, rand, negativeSamples, numberRelations, args.model)
 
 
@@ -841,27 +671,20 @@ if __name__ == '__main__':
     lambdaL2 = args.l2_regularization
     optimization = args.optimization
     modelName = args.model_name
-    rank = args.rank
     model = args.model
     fixedSampling = eval(args.fixed_sampling)
-    earlyStopping = eval(args.early_stopping)
-    singleReconstruction = eval(args.single_reconstruction)
     extEmb = eval(args.ext_emb)
     extendedReg = eval(args.extended_reg)
-    embeddingFeats = eval(args.embedding_feats)
     frequentEval = eval(args.frequent_eval)
     alpha = args.alpha
-    parinit = args.parinit
     inducer = ReconstructInducer(indexedData, goldStandard, rand, maxEpochs, learningRate,
                                  batchSize, embedSize, lambdaL1, lambdaL2, optimization, modelName,
-                                 rank, model, fixedSampling, singleReconstruction, extEmb, extendedReg,
-                                 embeddingFeats, frequentEval, alpha, parinit)
+                                 model, fixedSampling, extEmb, extendedReg,
+                                 frequentEval, alpha)
 
 
-    if earlyStopping:
-        inducer.learn_early_stopping()
-    else:
-        inducer.learn()
+
+    inducer.learn()
 
     saveModel(inducer, inducer.modelName)
 
