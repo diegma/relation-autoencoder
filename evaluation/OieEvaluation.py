@@ -140,13 +140,13 @@ class singleLabelClusterEvaluation:
                     referenceSets[relations[rel][0]] = set([rel])
         return referenceSets, assessableElems
 
+
     def createReferenceSetsFromData(self, relations):
         self.relations = relations
         referenceSets = {}
         assessableElems = set()
         for rel in relations:
-            # if relations[rel][0] != '':
-            if relations[rel][0] == '/location/location/containedby':  # this is used to assess the performance on containedby
+            if relations[rel][0] != '':
                 # print 'category', category
                 assessableElems.add(rel)
                 if relations[rel][0] in referenceSets:
