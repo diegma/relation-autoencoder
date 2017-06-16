@@ -183,6 +183,11 @@ def posPatternPath(info, arg1, arg2):
 
 
 def getBasicCleanFeatures():
+    """
+    "Rich features"
+    :return: functions of [trigger, entityTypes, arg1_lower, arg2_lower, bow_clean, entity1Type, entity2Type, lexicalPattern,
+                posPatternPath]
+    """
     features = [trigger, entityTypes, arg1_lower, arg2_lower, bow_clean, entity1Type, entity2Type, lexicalPattern,
                 posPatternPath]
     return features

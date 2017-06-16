@@ -427,7 +427,9 @@ def loadModel(name):
     return pickle.load(pklFile)
 
 def loadData(args, rng, negativeSamples, relationNum, modelType):
-
+    """
+    rng: random number generator
+    """
     if not os.path.exists(args.pickled_dataset):
         print "Pickled dataset not found"
         sys.exit()
