@@ -93,6 +93,24 @@ def getFeatures(lexicon, featureExs, info, arg1=None, arg2=None, expand=False):
     return feats
 
 def getFeaturesThreshold(lexicon, featureExs, info, arg1=None, arg2=None, expand=False, threshold=0):
+    """
+    extracts featurs again. keep the features with freq > threshold
+    getFeaturesThreshold(relationLexicon,
+                         featureExtrs,
+                         [re[1], re[4], re[5], re[7], re[8], re[6]],
+                         # [re[1], re[4], re[5], re[7]],
+                         re[2], re[3], True, threshold=args.threshold), re[5]
+                         ,relation=relationE
+                        )
+    :param lexicon:  FeatureLexicon
+    :param featureExs: feature extractors
+    :param info: features
+    :param arg1: entity1 
+    :param arg2: entity2
+    :param expand: True (always)
+    :param threshold: 
+    :return: 
+    """
     feats = []
     for f in featureExs:
         res = f(info, arg1, arg2)
