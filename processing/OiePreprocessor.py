@@ -6,12 +6,12 @@ import sys
 import time
 from definitions import OieFeatures
 from definitions import OieExample
+
 print sys.path
 import cPickle as pickle
 
 
 class FeatureLexicon:
-
     def __init__(self):
         self.nextId = 0
         self.id2Str = {}
@@ -30,7 +30,6 @@ class FeatureLexicon:
         else:
             self.id2freq[self.str2Id[s]] += 1
         return self.str2Id[s]
-
 
     def getOrAddPruned(self, s):
         if s not in self.str2IdPruned:
@@ -60,7 +59,6 @@ class FeatureLexicon:
         if idx not in self.id2freq:
             return None
         return self.id2freq[idx]
-
 
     def getDimensionality(self):
         return self.nextIdPruned
@@ -92,13 +90,13 @@ def getFeatures(lexicon, featureExs, info, arg1=None, arg2=None, expand=False):
 
     return feats
 
+
 def getFeaturesThreshold(lexicon, featureExs, info, arg1=None, arg2=None, expand=False, threshold=0):
     """
     extracts featurs again. keep the features with freq > threshold
     getFeaturesThreshold(relationLexicon,
                          featureExtrs,
                          [re[1], re[4], re[5], re[7], re[8], re[6]],
-                         # [re[1], re[4], re[5], re[7]],
                          re[2], re[3], True, threshold=args.threshold), re[5]
                          ,relation=relationE
                         )
@@ -109,7 +107,7 @@ def getFeaturesThreshold(lexicon, featureExs, info, arg1=None, arg2=None, expand
     :param arg2: entity2
     :param expand: True (always)
     :param threshold: 
-    :return: 
+    :return: list of feature id s, all the features is furned, i.e. freq > threshold.
     """
     feats = []
     for f in featureExs:
@@ -118,7 +116,7 @@ def getFeaturesThreshold(lexicon, featureExs, info, arg1=None, arg2=None, expand
             if type(res) == list:
                 for el in res:
                     featStrId = f.__name__ + "#" + el
-                    if expand:
+                    if expand:  # condition that lexicon always contains the feature
                         if lexicon.id2freq[lexicon.getId(featStrId)] > threshold:
                             feats.append(lexicon.getOrAddPruned(featStrId))
                     else:
@@ -139,11 +137,12 @@ def getFeaturesThreshold(lexicon, featureExs, info, arg1=None, arg2=None, expand
 
     return feats
 
+
 def prepareArgParser():
     parser = argparse.ArgumentParser(description='Processes an Oie file and add its representations '
                                                  'to a Python pickled file.')
 
-    parser.add_argument('input_file', metavar='input-file',  help='input file in the Yao format')
+    parser.add_argument('input_file', metavar='input-file', help='input file in the Yao format')
 
     parser.add_argument('pickled_dataset', metavar='pickled-dataset', help='pickle file to be used to store output '
                                                                            '(created if empty)')
@@ -153,16 +152,19 @@ def prepareArgParser():
     parser.add_argument('--features', default="basic", nargs="?", help='features (basic vs ?)')
     parser.add_argument('--threshold', default="0", nargs="?", type=int, help='minimum feature frequency')
 
-
-
     parser.add_argument('--test-mode', action='store_true',
-                         help='used for test files '
-                              '(the feature space is not expanded to include previously unseen features)')
-
+                        help='used for test files '
+                             '(the feature space is not expanded to include previously unseen features)')
 
     return parser
 
+
 def loadExamples(fileName):
+    """
+    load examples 
+    :param fileName: 
+    :return: [token, feature1,..., feature9], all str 
+    """
     count = 0
     with open(fileName, 'r') as fp:
         relationExamples = []
@@ -180,6 +182,7 @@ def loadExamples(fileName):
                 count += 1
 
     return relationExamples
+
 
 # if __name__ == '__main__':
 #     examples = loadExamples('/Users/admin/isti/amsterdam/data/candidate-100.txt')
@@ -256,14 +259,13 @@ if __name__ == '__main__':
     c = 0
     for re in relationExamples:
         getFeatures(relationLexicon, featureExtrs, [re[1], re[4], re[5], re[7], re[8], re[6]],
-                                                             re[2], re[3], True)
+                    re[2], re[3], True)
     for re in relationExamples:
         reIdx += 1
         if reIdx % 1000 == 0:
             print ".",
         if reIdx % 10000 == 0:
             print reIdx,
-
 
         relationE = ''
         if re[9] != '':
@@ -275,18 +277,16 @@ if __name__ == '__main__':
         #     else:
         #         relationE = re[10]
 
-        ex = OieExample.OieExample(re[2], re[3], getFeaturesThreshold(relationLexicon,
-                                                             featureExtrs,
-                                                             [re[1], re[4], re[5], re[7], re[8], re[6]],
-                                                             # [re[1], re[4], re[5], re[7]],
-                                                             re[2], re[3], True, threshold=args.threshold), re[5]
-                                                             ,relation=relationE
+        ex = OieExample.OieExample(re[2], re[3], getFeaturesThreshold(relationLexicon, featureExtrs,
+                                                                      [re[1], re[4], re[5], re[7], re[8], re[6]],
+                                                                      re[2], re[3], True,
+                                                                      threshold=args.threshold),
+                                   re[5], relation=relationE
                                    )
         relationLabels[c] = re[-1].strip().split(' ')
         c += 1
 
         examples.append(ex)
-
 
     tEnd = time.time()
     print "Done (" + str(tEnd - tStart) + "s.), processed " + str(len(examples))
@@ -295,7 +295,7 @@ if __name__ == '__main__':
     print "Pickling the dataset...",
 
     pklFile = open(args.pickled_dataset, 'wb')
-    #pklFile = gzip.GzipFile(args.pickled_dataset, 'wb')
+    # pklFile = gzip.GzipFile(args.pickled_dataset, 'wb')
 
     pklProtocol = 2
     pickle.dump(featureExtrs, pklFile, protocol=pklProtocol)
