@@ -30,18 +30,33 @@ class MatrixDataSetNoEncoding:
 
 
 class DataSetManager:
+    """
+    Attributes:
+        'id2Arg', 
+        'negSamplesNum', int: neg sample number
+        'negSamplingCum', list of float: 
+        'negSamplingDistr', list of float:
+        'negSamplingDistrPower', bool:
+        'validExs',  
+        'featureLex', OiePreprocessor.FeatureLexicon
+        'rng', : random state generator
+        'arg2Id', dict: entity string to id
+        'testExs', OieData.MatrixDataSet
+        'relationNum', int: relation number
+        'trainExs',OieData.MatrixDataSet:
+    """
     def __init__(self, oieDataset, featureLex, rng, negSamplesNum, relationNum, negSamplingDistrPower=0.75):
 
         self.negSamplesNum = negSamplesNum  # the number of negative samples considered
 
         self.negSamplingDistrPower = negSamplingDistrPower  # the sampling distribution for negative sampling
 
-        self.rng = rng
+        self.rng = rng # random number generator
 
-        self.relationNum = relationNum
+        self.relationNum = relationNum  # relation number
 
         # id2Str, str2Id
-        self.featureLex = featureLex
+        self.featureLex = featureLex  # feature lexicon
 
         # sets id2Arg1, id2Arg2, arg12Id, arg22Id, neg1SamplingDistr, neg2SamplingDistr
         self._extractArgsMappings(oieDataset)
@@ -84,15 +99,16 @@ class DataSetManager:
         l = len(oieExamples)
         n = self.negSamplesNum
 
-        args1 = np.zeros(l, dtype=np.int32)  #
-        args2 = np.zeros(l, dtype=np.int32)  #
+        args1 = np.zeros(l, dtype=np.int32)  # entity1 ids
+        args2 = np.zeros(l, dtype=np.int32)  # entity2 ids
 
 
-        neg1 = np.zeros((n, l), dtype=np.int32)  #
+        neg1 = np.zeros((n, l), dtype=np.int32)  # negative samples for the dataset: is it fixed? or change among different iteration?
         neg2 = np.zeros((n, l), dtype=np.int32)  #
 
 
         # print self.featureLex.getDimensionality()
+        # l * feature_dim 0-1 matrix.
         xFeatsDok = sp.dok_matrix((l, self.featureLex.getDimensionality()), dtype=theano.config.floatX)
                                                                           #  @UndefinedVariable float32
 
@@ -103,10 +119,10 @@ class DataSetManager:
             for feat in oieEx.features:
                 xFeatsDok[i, feat] = 1
 
-            # should do it differently (sample random indexes during training), see below
+            # should do it differently (sample random indexes during training), see below TODO
 
             for k in xrange(n):
-                neg1[k, i] = self._sample(self.negSamplingCum)
+                neg1[k, i] = self._sample(self.negSamplingCum)  # np.searchsorted
 
             for k in xrange(n):
                 neg2[k, i] = self._sample(self.negSamplingCum)
@@ -131,9 +147,9 @@ class DataSetManager:
     def _extractArgsMappings(self, oieDataset):
 
         # sets id2Arg1, id2Arg2, arg12Id, arg22Id, neg1SamplingDistr, neg2SamplingDistr
-        argFreqs = {}
-        for key in oieDataset:
-            for oieEx in oieDataset[key]:  # here it iterates over train, test, dev.
+        argFreqs = {} # frequency of unique entity
+        for key in oieDataset:  # key: 'train', 'test' ... Todo: is he count test set?
+            for oieEx in oieDataset[key]:  # here it iterates over train, test, dev. oieEx: OieExample
                 if oieEx.arg1 not in argFreqs:
                     argFreqs[oieEx.arg1] = 1
                 else:
@@ -148,12 +164,12 @@ class DataSetManager:
 
         self.id2Arg, self.arg2Id = self._indexElements(argFreqs)
 
-
-        argSampFreqs = [float(argFreqs[self.id2Arg[val]]) for val in xrange(len(self.id2Arg))]
-        argSampFreqsPowered = map(lambda x: m.pow(x, self.negSamplingDistrPower),  argSampFreqs)
-        norm1 = reduce(lambda x, y: x + y,  argSampFreqsPowered)
-        self.negSamplingDistr = map(lambda x: x / norm1, argSampFreqsPowered)
-        self.negSamplingCum = np.cumsum(self.negSamplingDistr)
+        # Todo: can rewrite by numpy
+        argSampFreqs = [float(argFreqs[self.id2Arg[val]]) for val in xrange(len(self.id2Arg))]  # id to freq, list of float
+        argSampFreqsPowered = map(lambda x: m.pow(x, self.negSamplingDistrPower),  argSampFreqs)  # seems same as mikolove
+        norm1 = reduce(lambda x, y: x + y,  argSampFreqsPowered)  # sum of argSampFreqsPowered
+        self.negSamplingDistr = map(lambda x: x / norm1, argSampFreqsPowered)  # divide norm, the probability for each entity id
+        self.negSamplingCum = np.cumsum(self.negSamplingDistr)  # like the stick beark position for calculating probability.
 
 
 

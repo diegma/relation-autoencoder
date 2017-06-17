@@ -1,4 +1,20 @@
+"""
+    Preprocessor, 
+    Useage: 
+        python processing/OiePreprocessor.py --batch-name train data-sample.txt sample.pk 
+        python processing/OiePreprocessor.py --batch-name dev data-sample.txt sample.pk
+        python processing/OiePreprocessor.py --batch-name test data-sample.txt sample.pk
+    sample.pk:
+        featureExtrs: list of extractor function
+        relationLexicon: OiePreprocessor.FeatureLexicon
+        dataset: dict: keys - 'train' .. 'test'
+            value: list of OieExample, i.e. the dataset
+        goldStandard: dict:
+            value: dict: relation labels
+"""
+
 __author__ = 'diego'
+
 
 import argparse
 import os

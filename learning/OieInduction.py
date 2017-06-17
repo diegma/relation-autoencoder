@@ -662,6 +662,8 @@ if __name__ == '__main__':
 
     negativeSamples = args.negative_samples_number
     numberRelations = args.relations_number
+    # indexedData: DataSetManager
+    # goldStanderd: dict of relation label
     indexedData, goldStandard = loadData(args, rand, negativeSamples, numberRelations, args.model)
 
 
@@ -679,6 +681,8 @@ if __name__ == '__main__':
     extendedReg = eval(args.extended_reg)
     frequentEval = eval(args.frequent_eval)
     alpha = args.alpha
+
+    # constructurt
     inducer = ReconstructInducer(indexedData, goldStandard, rand, maxEpochs, learningRate,
                                  batchSize, embedSize, lambdaL1, lambdaL2, optimization, modelName,
                                  model, fixedSampling, extEmb, extendedReg,

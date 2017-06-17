@@ -6,8 +6,8 @@ class OieExample (object):
     """
     def __init__(self, arg1, arg2, features, trigger, relation=''):
         self.features = features
-        self.arg1 = arg1
-        self.arg2 = arg2
+        self.arg1 = arg1  # str
+        self.arg2 = arg2  # str
         self.relation = relation
         self.trigger = trigger
 
