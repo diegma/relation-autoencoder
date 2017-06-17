@@ -256,7 +256,7 @@ if __name__ == '__main__':
         goldstandard[args.batch_name] = relationLabels
 
     reIdx = 0
-    c = 0
+    c = 0 # re id
     for re in relationExamples:
         getFeatures(relationLexicon, featureExtrs, [re[1], re[4], re[5], re[7], re[8], re[6]],
                     re[2], re[3], True)
@@ -266,7 +266,7 @@ if __name__ == '__main__':
             print ".",
         if reIdx % 10000 == 0:
             print reIdx,
-
+        # TODO: change to `relationE = re[9]`
         relationE = ''
         if re[9] != '':
             relationE = re[9]
@@ -283,7 +283,7 @@ if __name__ == '__main__':
                                                                       threshold=args.threshold),
                                    re[5], relation=relationE
                                    )
-        relationLabels[c] = re[-1].strip().split(' ')
+        relationLabels[c] = re[-1].strip().split(' ')  # relation id
         c += 1
 
         examples.append(ex)
